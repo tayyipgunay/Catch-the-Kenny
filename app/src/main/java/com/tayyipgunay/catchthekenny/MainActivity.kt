@@ -1,155 +1,139 @@
 package com.tayyipgunay.catchthekenny
 
-import android.app.AlertDialog
-import android.content.Context
-import android.content.Intent
-import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.os.CountDownTimer
 import android.os.Handler
 import android.os.Looper
 import android.view.View
-import android.widget.Button
 import android.widget.ImageView
-import android.widget.TextView
 import android.widget.Toast
+import androidx.appcompat.app.AppCompatActivity
+import com.tayyipgunay.catchthekenny.databinding.ActivityMainBinding
 import java.util.LinkedList
-import kotlin.properties.Delegates
 import kotlin.random.Random
 
-private lateinit var image1: ImageView
-private lateinit var image2: ImageView
-private lateinit var image3: ImageView
-private lateinit var image4: ImageView
-private lateinit var image5: ImageView
-private lateinit var image6: ImageView
-private lateinit var image7: ImageView
-private lateinit var image8: ImageView
-private lateinit var image9: ImageView
-private lateinit var timeText: TextView
-private lateinit var scoreText: TextView
-private lateinit var Restart: Button
-
-
-//var imagearray:ArrayList<ImageView>()
-// var imagearray=ArrayList<ImageView> ()
-//var imagearray = ArrayList<ImageView>()
-
-
 class MainActivity : AppCompatActivity() {
-    var runnable = Runnable {}//runnable bir arayüzdür.
-    var handler = Handler(Looper.getMainLooper())
-    private var score: Int = 0
 
-    //var imagearray = ArrayList<ImageView>()
-    var imagearray = LinkedList<ImageView>()///array listte olabilir.
+    // View Binding sayesinde layout'taki view'lere tip güvenli erişim sağlanır.
+    private lateinit var binding: ActivityMainBinding
+
+    // XML'deki 9 ImageView referansını tutan liste.
+    // Bu liste, her 500ms'de rastgele bir görselin gösterilmesi için kullanılır.
+    private val imageList = LinkedList<ImageView>()
+
+    // Kullanıcının kazanmış olduğu skorun tutulduğu değişken.
+    private var score = 0
+
+    // Belirli aralıklarla çalıştırılacak kod bloğunu barındıran Runnable.
+    // Bu Runnable, her 500ms'de rastgele bir ImageView'i görünür yapar.
+    private var runnable = Runnable {}
+
+    // Ana iş parçacığında (UI thread) zamanlanmış görevleri çalıştırmak için Handler.
+    private val handler = Handler(Looper.getMainLooper())
 
     override fun onCreate(savedInstanceState: Bundle?) {
-
-
         super.onCreate(savedInstanceState)
+        // Layout binding ile XML dosyası şişirilir ve setContentView(binding.root) ile ekrana yansıtılır.
+        binding = ActivityMainBinding.inflate(layoutInflater)
+        setContentView(binding.root)
 
+        // 'with(binding)' bloğu, binding üzerinden view'lere erişimi kısaltır.
+        with(binding) {
+            // XML layout dosyasındaki 9 ImageView'i imageList'e ekliyoruz.
+            imageList.add(imageView1)
+            imageList.add(imageView2)
+            imageList.add(imageView3)
+            imageList.add(imageView4)
+            imageList.add(imageView5)
+            imageList.add(imageView6)
+            imageList.add(imageView7)
+            imageList.add(imageView8)
+            imageList.add(imageView9)
 
-        setContentView(R.layout.activity_main)
+            // Her bir ImageView'e tıklama dinleyicisi ekleyerek doğru zamanda tıklama yapılırsa skoru artırıyoruz.
+            imageList.forEach { image ->
+                image.setOnClickListener {
+                    increaseScore() // Tıklama gerçekleştiğinde skor artışı.
+                }
+            }
 
-        timeText = findViewById(R.id.textView)
-        scoreText = findViewById(R.id.textView2)
-        Restart = findViewById(R.id.button)
-        image1 = findViewById(R.id.imageView1)
-        image2 = findViewById(R.id.imageView2)
-        image3 = findViewById(R.id.imageView3)
-        image4 = findViewById(R.id.imageView4)
-        image5 = findViewById(R.id.imageView5)
-        image6 = findViewById(R.id.imageView6)
-        image7 = findViewById(R.id.imageView7)
-        image8 = findViewById(R.id.imageView8)
-        image9 = findViewById(R.id.imageView9)
-        imagearray.add(image1)//binding.image1View olarak da yazabilirz.
-        imagearray.add(image2)
-        imagearray.add(image3)
-        imagearray.add(image4)
-        imagearray.add(image5)
-        imagearray.add(image6)
-        imagearray.add(image7)
-        imagearray.add(image8)
-        imagearray.add(image9)
+            // Yeniden başlat butonuna tıklanması durumunda oyunun resetlenip yeniden başlatılmasını sağlıyoruz.
+            button.setOnClickListener {
+                restartGame()
+            }
+        }
 
-        HideImage()
-        Zamanlama()
-
+        // Oyunun başlangıcında görselleri rastgele göster/gizle mekanizmasını ve geri sayım timer'ını başlatıyoruz.
+        hideImage()
+        startTimer()
     }
 
-    fun Zamanlama() {
-
+    /**
+     * 15.5 saniyelik geri sayım başlatılır.
+     * Her saniye kalan süre güncellenir; süre dolduğunda tüm ImageView'ler gizlenir
+     * ve kullanıcıya final skor Toast mesajı ile gösterilir.
+     */
+    private fun startTimer() {
         object : CountDownTimer(15500, 1000) {
-            override fun onTick(a: Long) {
-                timeText.text = "Time:" + a / 1000
-
+            override fun onTick(millisUntilFinished: Long) {
+                // Kalan süreyi saniye cinsinden TextView'e yazar.
+                binding.textView.text = "Time: ${millisUntilFinished / 1000}"
             }
-
             override fun onFinish() {
-
+                // Timer bitiminde, scheduled runnable iptal edilir.
                 handler.removeCallbacks(runnable)
-                for (image in imagearray) {
-                    image.visibility = View.INVISIBLE
-                }
-
-
-                Toast.makeText(this@MainActivity, "skorunuz $score", Toast.LENGTH_SHORT).show()
+                // Oyun bittiğinde tüm görseller gizlenir.
+                imageList.forEach { it.visibility = View.INVISIBLE }
+                // Final skor kullanıcıya Toast ile bildirilir.
+                Toast.makeText(this@MainActivity, "Score: $score", Toast.LENGTH_SHORT).show()
             }
-
-
-        }
-
-
-            .start()
+        }.start()
     }
 
-
-    fun HideImage() {
-
-        // Toast.makeText(this@MainActivity, "HideImage Çalışıyor.", Toast.LENGTH_LONG).show()
-val random=Random
+    /**
+     * hideImage fonksiyonu, her 500ms'de çalışarak:
+     * - Tüm ImageView'leri gizler.
+     * - Rastgele seçilen bir ImageView'i görünür yapar.
+     * Bu döngü, oyun süresince devam eder.
+     */
+    private fun hideImage() {
         runnable = object : Runnable {
-
             override fun run() {
-                for (image in imagearray) {
-                    image.visibility = View.INVISIBLE
-                }
-
-
-                val randomIndex = random.nextInt(9)
-                imagearray[randomIndex].visibility = View.VISIBLE
-                handler.postDelayed(runnable, 500)
+                // Önce tüm ImageView'ler gizlenir.
+                imageList.forEach { it.visibility = View.INVISIBLE }
+                // 0 ile imageList boyutu arasından rastgele bir index seçilir.
+                val randomIndex = Random.nextInt(imageList.size)
+                // Seçilen ImageView görünür hale getirilir.
+                imageList[randomIndex].visibility = View.VISIBLE
+                // Bu runnable, 500ms sonra tekrar çalıştırılır.
+                handler.postDelayed(this, 500)
             }
         }
+        // İlk runnable çağrısı yapılarak döngü başlatılır.
         handler.post(runnable)
-
     }
 
-
-    fun increasScore(view: View) {
-        score = score + 1
-        scoreText.text = "Score:$score"
+    /**
+     * increaseScore fonksiyonu:
+     * - Kullanıcı ImageView'e tıkladığında çağrılır.
+     * - Skoru 1 artırır ve güncel skoru TextView üzerinde gösterir.
+     */
+    private fun increaseScore() {
+        score++
+        binding.textView2.text = "Score: $score"
     }
 
-    fun Restart(view: View) {
-
-        // val intent = Intent(this@MainActivity, MainActivity::class.java)
-        //finish()
-        //startActivity(intent)
+    /**
+     * restartGame fonksiyonu:
+     * - Oyunu sıfırlamak için skoru ve zaman TextView'lerini resetler.
+     * - Yeni bir geri sayım ve görsel gösterme döngüsü başlatır.
+     */
+    private fun restartGame() {
         score = 0
-        scoreText.text = "Score:$score"
-        timeText.text = "Time:0"
-        Zamanlama()//zamanı başlatır ve bittiğinde ne olacağını olur.on finishe  remove runnable ile  kapatıyoruz.
-
-        HideImage()//nesneleri random olarak saklar. runnable ile yapar.
-
-
+        binding.textView2.text = "Score: $score"
+        binding.textView.text = "Time: 0"
+        // Oyunun yeniden başlaması için timer ve görsel döngüsü yeniden başlatılır.
+        startTimer()
+        hideImage()
     }
 }
-
-
-
-
-
